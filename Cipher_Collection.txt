@@ -1,0 +1,326 @@
+
+
+===== Hill_Cipher.ipynb =====
+
+
+
+    import numpy as np
+
+    # Fungsi enkripsi Hill Cipher
+    def hill_encrypt(text, key):
+        text = text.upper().replace(' ', '')
+        n = int(len(key) ** 0.5)
+        key = np.array(key).reshape(n, n)
+        result = ''
+        for i in range(0, len(text), n):
+            block = [ord(c) - 65 for c in text[i:i+n]]
+            # Tambahkan padding 'X' jika panjang blok kurang
+            while len(block) < n:
+                block.append(ord('X') - 65)
+            cipher = np.dot(key, block) % 26
+            result += ''.join(chr(c + 65) for c in cipher)
+        return result
+
+    # Fungsi dekripsi Hill Cipher
+    def hill_decrypt(cipher, key):
+        cipher = cipher.upper().replace(' ', '')
+        n = int(len(key) ** 0.5)
+        key = np.array(key).reshape(n, n)
+
+        # Cari invers matriks kunci modulo 26
+        det = int(round(np.linalg.det(key)))  # determinan kunci
+        det_inv = pow(det, -1, 26)  # invers determinan modulo 26
+        key_inv = (
+            det_inv * np.round(det * np.linalg.inv(key)).astype(int) % 26
+        ) % 26
+
+        result = ''
+        for i in range(0, len(cipher), n):
+            block = [ord(c) - 65 for c in cipher[i:i+n]]
+            plain = np.dot(key_inv, block) % 26
+            result += ''.join(chr(int(c) + 65) for c in plain)
+        return result
+
+    # Contoh penggunaan
+    key = [3, 3, 2, 5]
+    plaintext = "SAKURA"
+    ciphertext = hill_encrypt(plaintext, key)
+    decrypted = hill_decrypt(ciphertext, key)
+
+    print("Plaintext :", plaintext)
+    print("Ciphertext:", ciphertext)
+    print("Dekripsi  :", decrypted)
+
+    Plaintext : SAKURA
+    Ciphertext: CKMQZI
+    Dekripsi  : SAKURA
+
+
+===== Playfair_Cipher.ipynb =====
+
+
+
+    def generate_table(key):
+        alphabet = 'ABCDEFGHIKLMNOPQRSTUVWXYZ'
+        table = ''
+        for c in key.upper() + alphabet:
+            if c not in table:
+                table += c
+        return [table[i:i+5] for i in range(0, 25, 5)]
+
+
+    def find_position(table, letter):
+        for row in range(5):
+            for col in range(5):
+                if table[row][col] == letter:
+                    return row, col
+        return None
+
+
+    def decrypt(cipher_text, key):
+        table = generate_table(key)
+        cipher_text = cipher_text.upper().replace('J', 'I')
+        decrypted_text = ''
+
+        # Pastikan jumlah huruf genap
+        if len(cipher_text) % 2 != 0:
+            cipher_text += 'X'
+
+        for i in range(0, len(cipher_text), 2):
+            a, b = cipher_text[i], cipher_text[i + 1]
+            row_a, col_a = find_position(table, a)
+            row_b, col_b = find_position(table, b)
+
+            if row_a == row_b:
+                # Huruf di baris yang sama → ambil kiri
+                decrypted_text += table[row_a][(col_a - 1) % 5]
+                decrypted_text += table[row_b][(col_b - 1) % 5]
+            elif col_a == col_b:
+                # Huruf di kolom yang sama → ambil atas
+                decrypted_text += table[(row_a - 1) % 5][col_a]
+                decrypted_text += table[(row_b - 1) % 5][col_b]
+            else:
+                # Bentuk persegi → tukar kolom
+                decrypted_text += table[row_a][col_b]
+                decrypted_text += table[row_b][col_a]
+
+        return decrypted_text
+
+
+    # Contoh penggunaan
+    key = "NEGDIN"
+    cipher_text = "KDMZPFDX"   # contoh hasil enkripsi
+
+    table = generate_table(key)
+    print("Playfair Table:")
+    for row in table:
+        print(row)
+
+    print("\nCiphertext :", cipher_text)
+    print("Hasil dekripsi :", decrypt(cipher_text, key))
+
+    Playfair Table:
+    NEGDI
+    ABCFH
+    KLMOP
+    QRSTU
+    VWXYZ
+
+    Ciphertext : KDMZPFDX
+    Hasil dekripsi : ONPXOHGY
+
+
+===== Affine_Cipher.ipynb =====
+
+
+
+    # === AFFINE CIPHER: ENKRIPSI & DEKRIPSI OTOMATIS ===
+
+    # Fungsi untuk mencari invers modulo 26
+    def mod_inverse(a, m):
+        for x in range(1, m):
+            if (a * x) % m == 1:
+                return x
+        return None
+
+    # Fungsi enkripsi
+    def affine_encrypt(text, a, b):
+        result = ''
+        for char in text.upper():
+            if char.isalpha():
+                result += chr(((a * (ord(char) - 65) + b) % 26) + 65)
+            else:
+                result += char
+        return result
+
+    # Fungsi dekripsi
+    def affine_decrypt(cipher, a, b):
+        result = ''
+        a_inv = mod_inverse(a, 26)  # mencari invers dari a
+        if a_inv is None:
+            return "Tidak ada invers modular untuk a, pilih nilai a yang lain!"
+
+        for char in cipher.upper():
+            if char.isalpha():
+                result += chr(((a_inv * ((ord(char) - 65) - b)) % 26) + 65)
+            else:
+                result += char
+        return result
+
+
+    # ====== PROGRAM UTAMA ======
+    plaintext = "NENGDIN"
+    a = 5
+    b = 8
+
+    # Proses enkripsi & dekripsi
+    ciphertext = affine_encrypt(plaintext, a, b)
+    decrypted_text = affine_decrypt(ciphertext, a, b)
+
+    # Tampilkan hasil
+    print("=== AFFINE CIPHER ===")
+    print(f"Teks Asli     : {plaintext}")
+    print(f"Nilai a, b    : {a}, {b}")
+    print(f"Hasil Enkripsi: {ciphertext}")
+    print(f"Hasil Dekripsi: {decrypted_text}")
+
+    # Simpan ke file .txt
+    with open("hasil_affine_cipher.txt", "w") as file:
+        file.write("=== AFFINE CIPHER ===\n")
+        file.write(f"Teks Asli     : {plaintext}\n")
+        file.write(f"Nilai a, b    : {a}, {b}\n")
+        file.write(f"Hasil Enkripsi: {ciphertext}\n")
+        file.write(f"Hasil Dekripsi: {decrypted_text}\n")
+
+    print("\nHasil telah disimpan ke file 'hasil_affine_cipher.txt'")
+
+    === AFFINE CIPHER ===
+    Teks Asli     : NENGDIN
+    Nilai a, b    : 5, 8
+    Hasil Enkripsi: VCVMXWV
+    Hasil Dekripsi: NENGDIN
+
+    Hasil telah disimpan ke file 'hasil_affine_cipher.txt'
+
+
+===== Caesar_cipher.ipynb =====
+
+
+
+    # === Caesar Cipher: Enkripsi & Dekripsi Otomatis ===
+
+    def caesar_encrypt(text, shift):
+        """Fungsi untuk mengenkripsi teks dengan Caesar Cipher"""
+        result = ''
+        for char in text:
+            if char.isalpha():
+                base = ord('A') if char.isupper() else ord('a')
+                result += chr((ord(char) - base + shift) % 26 + base)
+            else:
+                result += char
+        return result
+
+
+    def caesar_decrypt(cipher, shift):
+        """Fungsi untuk mendekripsi teks Caesar Cipher"""
+        return caesar_encrypt(cipher, -shift)
+
+
+    # ====== PROGRAM UTAMA ======
+    plaintext = "DINNENG"
+    shift = 3
+
+    # Enkripsi dan Dekripsi
+    ciphertext = caesar_encrypt(plaintext, shift)
+    decrypted_text = caesar_decrypt(ciphertext, shift)
+
+    # Tampilkan hasil
+    print("=== Caesar Cipher ===")
+    print(f"Teks Asli     : {plaintext}")
+    print(f"Shift         : {shift}")
+    print(f"Hasil Enkripsi: {ciphertext}")
+    print(f"Hasil Dekripsi: {decrypted_text}")
+
+    # Simpan hasil ke file .txt
+    with open("hasil_caesar_cipher.txt", "w") as file:
+        file.write("=== Caesar Cipher ===\n")
+        file.write(f"Teks Asli     : {plaintext}\n")
+        file.write(f"Shift         : {shift}\n")
+        file.write(f"Hasil Enkripsi: {ciphertext}\n")
+        file.write(f"Hasil Dekripsi: {decrypted_text}\n")
+
+    print("\nHasil telah disimpan ke file 'hasil_caesar_cipher.txt'")
+
+    === Caesar Cipher ===
+    Teks Asli     : DINNENG
+    Shift         : 3
+    Hasil Enkripsi: GLQQHQJ
+    Hasil Dekripsi: DINNENG
+
+    Hasil telah disimpan ke file 'hasil_caesar_cipher.txt'
+
+
+===== Vigenère_Cipher.ipynb =====
+
+
+
+    # === VIGENÈRE CIPHER: ENKRIPSI & DEKRIPSI OTOMATIS ===
+
+    def vigenere_encrypt(plain, key):
+        """Fungsi untuk mengenkripsi teks dengan Vigenère Cipher"""
+        key = key.upper()
+        result = ''
+        for i, char in enumerate(plain.upper()):
+            if char.isalpha():
+                shift = ord(key[i % len(key)]) - 65  # menghitung pergeseran huruf berdasarkan key
+                result += chr((ord(char) - 65 + shift) % 26 + 65)
+            else:
+                result += char
+        return result
+
+
+    def vigenere_decrypt(cipher, key):
+        """Fungsi untuk mendekripsi teks Vigenère Cipher"""
+        key = key.upper()
+        result = ''
+        for i, char in enumerate(cipher.upper()):
+            if char.isalpha():
+                shift = ord(key[i % len(key)]) - 65
+                result += chr((ord(char) - 65 - shift) % 26 + 65)
+            else:
+                result += char
+        return result
+
+
+    # ====== PROGRAM UTAMA ======
+    plaintext = "DININENENG"
+    key = "LEMON"
+
+    # Enkripsi dan Dekripsi
+    ciphertext = vigenere_encrypt(plaintext, key)
+    decrypted_text = vigenere_decrypt(ciphertext, key)
+
+    # Tampilkan hasil
+    print("=== VIGENÈRE CIPHER ===")
+    print(f"Teks Asli     : {plaintext}")
+    print(f"Kunci (Key)   : {key}")
+    print(f"Hasil Enkripsi: {ciphertext}")
+    print(f"Hasil Dekripsi: {decrypted_text}")
+
+    # Simpan hasil ke file .txt
+    with open("hasil_vigenere_cipher.txt", "w") as file:
+        file.write("=== VIGENÈRE CIPHER ===\n")
+        file.write(f"Teks Asli     : {plaintext}\n")
+        file.write(f"Kunci (Key)   : {key}\n")
+        file.write(f"Hasil Enkripsi: {ciphertext}\n")
+        file.write(f"Hasil Dekripsi: {decrypted_text}\n")
+
+    print("\nHasil telah disimpan ke file 'hasil_vigenere_cipher.txt'")
+
+    === VIGENÈRE CIPHER ===
+    Teks Asli     : DININENENG
+    Kunci (Key)   : LEMON
+    Hasil Enkripsi: OMZWAPRQBT
+    Hasil Dekripsi: DININENENG
+
+    Hasil telah disimpan ke file 'hasil_vigenere_cipher.txt'
